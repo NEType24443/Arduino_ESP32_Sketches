@@ -20,7 +20,6 @@ BLECharacteristic * pLatCharacteristic = NULL, * pLngCharacteristic = NULL;
 bool  deviceConnected = false,
       oldDeviceConnected = false,
       ledState = false;
-uint32_t value = 0;
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
@@ -68,19 +67,19 @@ bool processGPS() {
         fpos = 0;
     }
     else {
-      if ( (fpos - 2) < payloadSize )
+      if ( (fpos - 2) < payloadSize ) // All data is fed to data structure NAV_POSLLH instance posllh
         ((unsigned char*)(&posllh))[fpos - 2] = c;
 
       fpos++;
 
-      if ( fpos == (payloadSize + 2) ) {
+      if ( fpos == (payloadSize + 2) ) { // once Headers(+2) and Payload is done 
         calcChecksum(checksum);
       }
-      else if ( fpos == (payloadSize + 3) ) {
+      else if ( fpos == (payloadSize + 3) ) { // 
         if ( c != checksum[0] )
           fpos = 0;
       }
-      else if ( fpos == (payloadSize + 4) ) {
+      else if ( fpos == (payloadSize + 4) ) { // 
         fpos = 0;
         if ( c == checksum[1] ) {
           return true;
