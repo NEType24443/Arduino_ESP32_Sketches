@@ -1,3 +1,9 @@
+
+// Works without Checksum error if delay between POSLLH requests is greater than or equal to 1.5 second
+// Works without Checksum error if delay between SOL requests is greater than or equal to 1.0 second
+// Major issue seems to be iming between requests
+// Recommend to use the Sketch GPS_POSLLH_SOL_Periodic_Request
+
 #include <Arduino.h>
 #include <HardwareSerial.h>
 #include <Streaming.h>
@@ -190,67 +196,57 @@ void loop() {
   
   if(processGPS(sizeof(NAV_POSLLH))){
     Serial<<"Got Data"<<endl;
-//    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(LED_PIN, HIGH);
     String Lat = String(Posllh.lat/10000000) + "." + String(Posllh.lat%10000000);
     String Lon = String(Posllh.lon/10000000) + "." + String(Posllh.lon%10000000);
     Serial<< "Lat: " << Lat << F(" N  ") << "Lon: " << Lon << F(" E") <<endl
           << "iTOW: " << Posllh.iTOW <<endl;
-//    while(GpsUart.available())GpsUart.flush();
-//    delay(700);
-//    digitalWrite(LED_PIN, LOW);
-//    delay(700);
+    delay(200);
+    digitalWrite(LED_PIN, LOW);
+    delay(700);
+
+    if(processGPS(sizeof(NAV_SOL))){
+      Serial<<"Got Data"<<endl;
+      digitalWrite(LED_PIN, HIGH);
+      String Fix = "";
+      switch (Sol.gpsFix){
+        case NO_FIX:
+          Fix = F("No Fix");
+          break;
+        case DR:
+          Fix = F("Dead Reckoning");
+          break;
+        case _2D_Fix:
+          Fix = F("2D-Fix");
+          break;
+        case _3D_Fix:
+          Fix = F("3D-Fix");
+          break;
+        case GPS_DR:
+          Fix = F("GPS + Dead Reckoning");
+          break;
+        case TOF:
+          Fix = F("Time Only Fix");
+          break;
+        default:
+          Fix = F("INVALID");
+      }
+      Serial<< "Fix Status:"<< Fix << endl;
+      delay(200);
+      digitalWrite(LED_PIN, LOW);
+      delay(800);
+    }
+    else{
+      Serial<< F("E --> Could not get NAV-SOL Data\n");
+    }
   }
   else{
 //    Serial<< "Size of posllh:" << sizeof(NAV_POSLLH) << endl; // 28 bytes + class + id + length = 32
 //    Serial<< "Size of sol:"    << sizeof(NAV_SOL) << endl;    // 52 bytes + class + id + length = 56    
     digitalWrite(LED_PIN, HIGH);
-    //delay(900);
+    delay(700);
     digitalWrite(LED_PIN, LOW);
-    //delay(300);
-//    while(GpsUart.available())GpsUart.flush();
+    delay(300);
   }
   
-  //delay(1000);
-  
-//  if(processGPS(sizeof(NAV_SOL))){
-//    Serial<<"Got Data"<<endl;
-////    digitalWrite(LED_PIN, HIGH);
-//    String Fix = "";
-//    switch (Sol.gpsFix){
-//      case NO_FIX:
-//        Fix = F("No Fix");
-//        break;
-//      case DR:
-//        Fix = F("Dead Reckoning");
-//        break;
-//      case _2D_Fix:
-//        Fix = F("2D-Fix");
-//        break;
-//      case _3D_Fix:
-//        Fix = F("3D-Fix");
-//        break;
-//      case GPS_DR:
-//        Fix = F("GPS + Dead Reckoning");
-//        break;
-//      case TOF:
-//        Fix = F("Time Only Fix");
-//        break;
-//      default:
-//        Fix = F("INVALID");
-//    }
-//    Serial<< "Fix Status:"<< Fix << endl;
-//    while(GpsUart.available())GpsUart.flush();
-////    delay(800);
-////    digitalWrite(LED_PIN, LOW);
-////    delay(800);
-//  }
-//  else{
-////    Serial<< "Size of posllh:" << sizeof(NAV_POSLLH) << endl; // 28 bytes + class + id + length = 32
-////    Serial<< "Size of sol:"    << sizeof(NAV_SOL) << endl;    // 52 bytes + class + id + length = 56    
-//    digitalWrite(LED_PIN, HIGH);
-//    delay(800);
-//    digitalWrite(LED_PIN, LOW);
-//    //delay(1000);
-//    while(GpsUart.available())GpsUart.flush();
-//  }
 }
