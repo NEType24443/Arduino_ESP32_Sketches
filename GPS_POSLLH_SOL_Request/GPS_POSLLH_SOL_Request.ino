@@ -17,7 +17,7 @@
 #define TX2 GPIO_NUM_26   //  SIM800L RX
 
 HardwareSerial GpsUart(1);
-  
+
 #define NO_FIX  0x00  //  NO-FIX
 #define DR      0x01  //  DEAD RECKONING
 #define _2D_Fix 0x02  //  2D-FIX
@@ -188,7 +188,7 @@ void setup() {
   Serial.begin(115200);
   GpsUart.begin(115200, SERIAL_8N1, RX1, TX1);
   pinMode(LED_PIN, OUTPUT);
-  delay(1000); // FOR ANTENNA RESET
+  delay(1000); // FOR ANTENNA RESET ON POWER ON
   GpsUart.flush();
 }
 
