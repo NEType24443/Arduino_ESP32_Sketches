@@ -4,33 +4,49 @@
 #define RX1 GPIO_NUM_32   //  GPS TX
 #define TX1 GPIO_NUM_33   //  GPS RX
 
+#define RX2 GPIO_NUM_16   //  SIM800L TX 
+#define TX2 GPIO_NUM_17   //  SIM800L RX
+
 HardwareSerial PeekUart(1);
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  PeekUart.begin(115200, SERIAL_8N1, RX1, TX1);
+  PeekUart.begin(9600, SERIAL_8N1, RX2, TX2);
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
-  int b = 0;
-  while(!Serial.available());
-  Serial<<"Got Data"<<endl;
+  //while(!Serial.available());
+  //Serial<<"Got Data"<<endl;
   while( Serial.available()){
-    b = Serial.read();
-    Serial.write(b);
-    PeekUart.write(b);
+    PeekUart.write(Serial.read());
   }
-  b = 0;
-  while(!PeekUart.available());
+  //while(!PeekUart.available());
   while( PeekUart.available()){
-    b = PeekUart.read();
-    Serial.write(b);
+    Serial.write(PeekUart.read());
   }
-  Serial<<"Recieved Data"<<endl;
+  //Serial<<"Recieved Data"<<endl;
 }
-
+//GPS
+//void loop() {
+//  // put your main code here, to run repeatedly:
+//  int b = 0;
+//  while(!Serial.available());
+//  Serial<<"Got Data"<<endl;
+//  while( Serial.available()){
+//    b = Serial.read();
+//    Serial.write(b);
+//    PeekUart.write(b);
+//  }
+//  b = 0;
+//  while(!PeekUart.available());
+//  while( PeekUart.available()){
+//    b = PeekUart.read();
+//    Serial.write(b);
+//  }
+//  Serial<<"Recieved Data"<<endl;
+//}
 /*#include <HardwareSerial.h>
 #include <Streaming.h>
 

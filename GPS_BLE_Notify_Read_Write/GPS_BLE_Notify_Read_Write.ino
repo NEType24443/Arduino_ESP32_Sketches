@@ -5,7 +5,7 @@
 #include <HardwareSerial.h>
 #include <Streaming.h>
 
-#define LED_PIN 2
+#define LED_PIN GPIO_NUM_2
 
 #define RX1 GPIO_NUM_32   //  GPS TX
 #define TX1 GPIO_NUM_33   //  GPS RX
@@ -37,9 +37,9 @@ struct NAV_POSLLH {
   unsigned char   id;
   unsigned short  len;
   unsigned long   iTOW;         // ms       GPS time of week of the navigation epoch. See the description of iTOW for details
-  long            lon = 0.0;    // deg      Longitude (1e-7)
-  long            lat = 0.0;    // deg      Latitude (1e-7)
-  long            height = 0.0; // mm       Height above ellipsoid
+  long            lon = 0;      // deg      Longitude (1e-7)
+  long            lat = 0;      // deg      Latitude (1e-7)
+  long            height = 0;   // mm       Height above ellipsoid
   long            hMSL;         // mm       Height above mean sea level
   unsigned long   hAcc;         // mm       Horizontal accuracy estimate
   unsigned long   vAcc;         // mm       Vertical accuracy estimate
@@ -85,16 +85,16 @@ void calcChecksum(unsigned char* CK) {
 bool processGPS(uint8_t data_struct) {
   static int fpos = 0;
   static unsigned char checksum[2];
+  int payloadSize = 0;
   switch(data_struct){
     case 0:
-      const int payloadSize = sizeof(NAV_POSLLH);
+      payloadSize = sizeof(NAV_POSLLH);
       GpsUart<<_HEX(0x01)<<_HEX(0x02);
       break;
     case 1:
-      const int payloadSize = sizeof(NAV_SOL);
+      payloadSize = sizeof(NAV_SOL);
       GpsUart<<_HEX(0x01)<<_HEX(0x02);
       break;
-    
   }
   // sizeof(NAV_POSLLH); // 28 bytes
   // sizeof(NAV_SOL); // 52 bytes
@@ -157,6 +157,7 @@ class GpsLatCharacteristicCallbacks: public BLECharacteristicCallbacks {
      i++;
     }
     Serial<< endl;
+    pCharacteristic->notify();
   }
 };
 
@@ -172,6 +173,7 @@ class GpsLonCharacteristicCallbacks: public BLECharacteristicCallbacks {
      i++;
     }
     Serial<< endl;
+    pCharacteristic->notify();
   }
 };
 
@@ -272,7 +274,7 @@ void loop() {
     GpsUart.flush();
   }
   // Notify changed value
-  if (deviceConnected && processGPS()) {
+  if (deviceConnected && processGPS(0)) {
     digitalWrite(LED_PIN, HIGH);
     String Lat = String(Posllh.lat/10000000) + "." + String(Posllh.lat%10000000);
     String Lon = String(Posllh.lon/10000000) + "." + String(Posllh.lon%10000000);

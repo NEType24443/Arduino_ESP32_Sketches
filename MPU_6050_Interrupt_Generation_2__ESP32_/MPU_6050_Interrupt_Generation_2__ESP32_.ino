@@ -3,10 +3,10 @@
 #include<Streaming.h>
 
 #define LED_PIN 2
-#define INTERRUPT_PIN 23
+#define INTERRUPT_PIN 22
 
-#define SDA_PIN 21
-#define SCL_PIN 22
+#define SDA_PIN 1
+#define SCL_PIN 19 // 21
 
 #define MOTION_THRESHOLD 5   // 12
 #define MOTION_EVENT_DURATION 500    //50
@@ -55,5 +55,5 @@ void setup() {
 }
 
 void loop() {
-  digitalWrite(3, millis()%1000>500);
+  //digitalWrite(3, millis()%1000>500);
 }

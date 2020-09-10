@@ -10,11 +10,11 @@
 #define RX1           GPIO_NUM_32   //  GPS TX
 #define TX1           GPIO_NUM_33   //  GPS RX
 
-#define RX2           GPIO_NUM_25   //  SIM800L TX 
-#define TX2           GPIO_NUM_26   //  SIM800L RX
+#define RX2           GPIO_NUM_16   //  SIM800L TX 
+#define TX2           GPIO_NUM_17   //  SIM800L RX
 
 HardwareSerial GpsUart(1);
-  
+
 #define NO_FIX  0x00  //  NO-FIX
 #define DR      0x01  //  DEAD RECKONING
 #define _2D_Fix 0x02  //  2D-FIX
@@ -41,9 +41,9 @@ struct NAV_POSLLH {
   unsigned char   id;
   unsigned short  len;
   unsigned long   iTOW;         // ms       GPS time of week of the navigation epoch. See the description of iTOW for details
-  long            lon = 0.0;    // deg      Longitude (1e-7)
-  long            lat = 0.0;    // deg      Latitude (1e-7)
-  long            height = 0.0; // mm       Height above ellipsoid
+  long            lon = 0;      // deg      Longitude (1e-7)
+  long            lat = 0;      // deg      Latitude (1e-7)
+  long            height = 0;   // mm       Height above ellipsoid
   long            hMSL;         // mm       Height above mean sea level
   unsigned long   hAcc;         // mm       Horizontal accuracy estimate
   unsigned long   vAcc;         // mm       Vertical accuracy estimate
@@ -51,7 +51,7 @@ struct NAV_POSLLH {
 };
 
 struct NAV_SOL {
-//  // Type         Name           Unit     Description (scaling)
+//  // Type         Name         Unit     Description (scaling)
   unsigned char   cls;
   unsigned char   id;
   unsigned short  len;        // 
@@ -240,11 +240,10 @@ void loop() {
       # if DEBUG > 0
       Serial<<"Got Data"<<endl;
       # endif
-      // digitalWrite(LED_PIN, HIGH);
-      //String Lat = String(Posllh.lat/10000000) + "." + String(Posllh.lat%10000000);
-      double  lat = Posllh.lat/10000000 + Posllh.lat%10000000;
-      //String Lon = String(Posllh.lon/10000000) + "." + String(Posllh.lon%10000000);
-      double  lon = Posllh.lon/10000000 + Posllh.lon%10000000;
+//      String Lat = String(Posllh.lat/10000000) + "." + String(Posllh.lat%10000000);
+      double  lat = Posllh.lat/10000000.F;
+//      String Lon = String(Posllh.lon/10000000) + "." + String(Posllh.lon%10000000);
+      double  lon = Posllh.lon/10000000.F;
       Serial<< F("Lat: ")  << _FLOAT(lat, 7) << F(" N   ") 
             << F("Lon: ")  << _FLOAT(lon, 7) << F(" E") << endl
             << F("iTOW: ") << Posllh.iTOW << endl;
