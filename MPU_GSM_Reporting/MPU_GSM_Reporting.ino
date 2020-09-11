@@ -49,7 +49,7 @@ HardwareSerial GsmUart(2);
 
 MPU6050 accelgyro;
 
-const String PHONENUM = "09448517225";
+const String PHONENUM = "09481501967"; //"09448517225";
 const String BaseLink = "The current Location is https://www.google.com/maps/place/"; 
 
 volatile  bool ledState = false, crashed = 0, ringPin = 0;
@@ -57,6 +57,10 @@ volatile  bool ledState = false, crashed = 0, ringPin = 0;
 
 BLEServer* pServer = NULL;
 BLECharacteristic * pLatCharacteristic = NULL, * pLngCharacteristic = NULL;
+
+// Stored like this to prevent overflow
+uint32_t  phoneLatLow = 0, phoneLonLow = 0; // Low is to right of decimal pt.
+int16_t   phoneLatUp  = 0, phoneLonUp  = 0; // Up  is to left  of decimal pt.
 
 bool  deviceConnected = false,
       oldDeviceConnected = false;
@@ -129,7 +133,7 @@ void IRAM_ATTR interruptServiceRoutineMpu() {
 void IRAM_ATTR interruptServiceRoutineRing(){
   crashed = 1;
   ringPin = 1;
-  Serial <<"---> RING PIN HIGH "<< endl; 
+  Serial <<"\n---> RING PIN HIGH \n"; 
 }
 
 byte calcChecksum(unsigned char* CK, int payloadSize) {
@@ -232,19 +236,38 @@ bool processGPS(uint8_t payloadSize) {
 
 class GpsLatCharacteristicCallbacks: public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pCharacteristic){
-    //Serial<<"Lat Set to:"<< pCharacteristic->getValue() << endl;
     std::string Lat = pCharacteristic->getValue();
-    //ESP_LOGI(Lat);
-    Lat += " N";
-    uint8_t i = 0;
-    while(Lat.length()>i){
-     #if DEBUG > 0
-     Serial<< Lat[i];
-     #endif
-     i++;
+    uint8_t i = 0, decimalPlaces = 0;
+    bool    decimalPt = 0;
+    phoneLatUp = 0;
+    phoneLatLow = 0;
+    while(Lat.length() > i){
+      #if DEBUG > 0
+      Serial<< Lat[i];
+      #endif
+      if(Lat[i] != '.' ){  // Conver Char to Int without the '.' (decimal point) character of the string
+        if(!decimalPt){
+          phoneLatUp  += (Lat[i] - '0');
+          phoneLatUp  *= 10; 
+        }
+        else{
+          phoneLatLow += (Lat[i] - '0');
+          phoneLatLow *= 10;
+          decimalPlaces++;
+        }
+      }
+      else decimalPt = 1;
+      i++;
+    }
+    phoneLatUp  /= 10;
+    phoneLatLow /= 10;
+    while(decimalPlaces<7){
+      phoneLatLow *= 10;
+      decimalPlaces++;
     }
     #if DEBUG > 0
-    Serial<< endl;
+    Serial<<" N"<< endl;
+    Serial<<phoneLatUp<<phoneLatLow<<endl;
     #endif
     pCharacteristic->notify();
   }
@@ -252,19 +275,38 @@ class GpsLatCharacteristicCallbacks: public BLECharacteristicCallbacks {
 
 class GpsLonCharacteristicCallbacks: public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* pCharacteristic){
-    //Serial<<"Lon Set to:"<< pCharacteristic->getValue();
     std::string Lon = pCharacteristic->getValue();
-    //ESP_LOGI(Lon);
-    Lon += " E";
-    uint8_t i = 0;
-    while(Lon.length()>i){
-     #if DEBUG > 0
-     Serial<< Lon[i];
-     #endif
-     i++;
+    uint8_t i = 0, decimalPlaces = 0;
+    bool    decimalPt = 0;
+    phoneLonUp = 0;
+    phoneLonLow = 0;
+    while(Lon.length() > i){
+      #if DEBUG > 0
+      Serial<< Lon[i];
+      #endif
+      if(Lon[i] != '.' ){  // Conver Char to Int without the '.' (decimal point) character of the string
+        if(!decimalPt){
+          phoneLonUp  += (Lon[i] - '0');
+          phoneLonUp  *= 10;
+        }
+        else{
+          phoneLonLow += (Lon[i] - '0');
+          phoneLonLow *= 10;
+          decimalPlaces++;
+        }
+      }
+      else decimalPt = 1;
+      i++;
+    }
+    phoneLonUp  /= 10;
+    phoneLonLow /= 10;
+    while(decimalPlaces<7){
+      phoneLonLow *= 10;
+      decimalPlaces++;
     }
     #if DEBUG > 0
-    Serial<< endl;
+    Serial<<" E"<< endl;
+    Serial<<phoneLonUp<<phoneLonLow<<endl;
     #endif
     pCharacteristic->notify();
   }
@@ -281,7 +323,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
 };
 
 String GsmUartSend(String incoming){ //Function to communicate with SIM800 module
-  GsmUart<<incoming; delay(100); //Print what is being sent to GSM module
+  GsmUart<<incoming<<endl; delay(100); //Print what is being sent to GSM module
   String result = "";
   while (GsmUart.available()) //Wait for result
   {
@@ -415,7 +457,7 @@ void setup() {
   # if DEBUG > 0
   Serial<<"Response: "<<GsmUartSend("ATE1")<<endl;
   #elif
-  GsmUart<<"ATE1";
+  GsmUart<<"ATE1"<<endl;
   #endif
   delay(1000);
   
@@ -423,7 +465,7 @@ void setup() {
    # if DEBUG > 0
   Serial<<"Response: "<<GsmUartSend("AT+CGATT=1")<<endl;
   #elif
-  GsmUart<<"AT+CGATT=1";
+  GsmUart<<"AT+CGATT=1"<<endl;
   #endif
   delay(1000);
 
@@ -431,7 +473,7 @@ void setup() {
    # if DEBUG > 0
   Serial<<"Response: "<<GsmUartSend("AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\" ")<<endl;
   #elif
-  GsmUart<<"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\" ";
+  GsmUart<<"AT+SAPBR=3,1,\"CONTYPE\",\"GPRS\" "<<endl;
   #endif
   delay(1000);
 
@@ -439,23 +481,23 @@ void setup() {
   # if DEBUG > 0
   Serial<<"Response: "<<GsmUartSend("AT+SAPBR=3,1,\"APN\",\"airtelgprs.com\" ")<<endl;
   #elif
-  GsmUart<<"AT+SAPBR=3,1,\"APN\",\"airtelgprs.com\" ";
+  GsmUart<<"AT+SAPBR=3,1,\"APN\",\"airtelgprs.com\" "<<endl;
   #endif
-  delay(2000);
+  delay(1000);
 
   //Open bearer Profile
   # if DEBUG > 0
   Serial<<"Response: "<<GsmUartSend("AT+SAPBR=1,1")<<endl;
   #elif
-  GsmUart<<"AT+SAPBR=1,1";
+  GsmUart<<"AT+SAPBR=1,1"<<endl;
   #endif
-  delay(2000);
+  delay(1000);
 
   //Get the IP address of the bearer profile
   # if DEBUG > 0
   Serial<<"Response: "<<GsmUartSend("AT+SAPBR=2,1")<<endl;
   #elif
-  GsmUart<<"AT+SAPBR=2,1";
+  GsmUart<<"AT+SAPBR=2,1"<<endl;
   #endif
   delay(1000);
   
@@ -466,14 +508,56 @@ void setup() {
 }
 
 void loop() {
+  // Disconnecting
+  if (!deviceConnected && oldDeviceConnected) {
+    delay(200); // give the bluetooth stack the chance to get things ready
+    Serial<< ".";
+    delay(200);
+    Serial<< ".";
+    delay(200);
+    Serial<< "." << endl;
+    pServer->startAdvertising(); // restart advertising
+    Serial<< F("--> Start Advertising Device Name") << endl;
+    oldDeviceConnected = deviceConnected; // oldDeviceConnected = false
+  }
+  // Connecting
+  if (deviceConnected && !oldDeviceConnected) {
+    // do stuff here on connecting
+    oldDeviceConnected = deviceConnected; // oldDeviceConnected = true
+    Serial<< F("--> Connecting\n");
+  }
+  // Wait for connection
+  if(!deviceConnected){
+    Serial<< F("--> Waiting for connection");
+    while(!deviceConnected){
+      //if( GpsUart.available() ) GpsUart.flush();
+      digitalWrite(LED_PIN, ledState^=1);
+      if(ledState) delay(100);
+      else{
+        delay(900);
+        Serial<<(".");
+      }
+//      delay((ledState) ? 100 : 2900);
+    }
+    Serial<<endl;
+    digitalWrite(LED_PIN, LOW);
+    //GpsUart.flush();
+  }
   // Notify changed value
   if(deviceConnected || ringPin){
     if(ringPin){
+      if(GsmUart.available()){
+        if(GsmUart.readString() == "RING"){
+          GsmUart<<"ATH"<<endl;
+        }
+        GsmUart.flush();
+      }
       #if DEBUG > 0
-      Serial<<"Response: "<<GsmUartSend("ATH")<<endl;
+      Serial<<"Response: "<<GsmUartSend("ATE0")<<endl;
       #elif
-      GsmUart<<"ATH";
+      GsmUart<<"ATE0"<<endl;
       #endif
+      GsmUart.flush();
     }
     if(!lastCrashed && crashed ){
       requestGPS(ON);
@@ -481,13 +565,14 @@ void loop() {
       lastCrashed = 1;
       delay(5);
     }
-    else if( lastCrashed && !crashed){
+    if( lastCrashed && !crashed){
       requestGPS(OFF);
+      GpsUart.flush();
       digitalWrite(LED_PIN, LOW);
       lastCrashed = 0;
       delay(5);
     }
-    else if(lastCrashed && crashed)  {
+    if(lastCrashed && crashed)  {
       uint8_t counter = 0;
       bool gotGpsData = false;
       double  lat = 0, lon = 0;
@@ -549,6 +634,20 @@ void loop() {
           break;
         }
       }
+      
+      #if DEBUG > 0
+      Serial<<"Response: "<<GsmUartSend("ATE0")<<endl; //Disable Echo
+      #elif
+      GsmUart<<"ATE0"<<endl;
+      #endif
+      delay (1000);
+
+      #if DEBUG > 0
+      Serial <<"Sending sms"<<endl;
+      #endif
+      GsmUart<<"AT+CMGF=1"<<endl; //Set the module in SMS mode
+      delay(1000);
+        
       if(gotGpsData){
         #if DEBUG > 0
         Serial<<"GOT GPS LOCATION"<<endl;
@@ -560,19 +659,6 @@ void loop() {
 //        #endif
 //        delay (1000);
         
-        #if DEBUG > 0
-        Serial<<"Response: "<<GsmUartSend("ATE0")<<endl; //Disable Echo
-        #elif
-        GsmUartSend("ATE0");
-        #endif
-        delay (1000);
-  
-        #if DEBUG > 0
-        Serial <<"Sending sms"<<endl;
-        #endif
-        GsmUart<<"AT+CMGF=1"<<endl; //Set the module in SMS mode
-        delay(1000);
-        
         GsmUart<<"AT+CMGS="<<"\""<<PHONENUM<<"\""<<endl; //Send SMS to this number
         delay(1000);
         
@@ -582,43 +668,26 @@ void loop() {
         GsmUart<< BaseLink << _FLOAT(lat, 7) <<","<< _FLOAT(lon, 7) << endl<< (char)26 <<endl;
         delay(1000);
       }
+      else{
+        #if DEBUG > 0
+        Serial<<"COULD NOT GET GPS LOCATION USING LAST PHONE LOCATION"<<endl;
+        #endif
+        
+        GsmUart<<"AT+CMGS="<<"\""<<PHONENUM<<"\""<<endl; //Send SMS to this number
+        delay(1000);
+
+        #if DEBUG > 0
+        Serial << BaseLink 
+               << phoneLatUp << "." << phoneLatLow << "," 
+               << phoneLonUp << "." << phoneLonLow << endl;
+        #endif
+        GsmUart<< BaseLink 
+               << phoneLatUp << "." << phoneLatLow << "," 
+               << phoneLonUp << "." << phoneLonLow  << endl<< (char)26 <<endl;
+        delay(1000);
+      }
       crashed = 0;
       ringPin = 0;
     }
-  }
-  // Disconnecting
-  if (!deviceConnected && oldDeviceConnected) {
-    delay(200); // give the bluetooth stack the chance to get things ready
-    Serial<< ".";
-    delay(200);
-    Serial<< ".";
-    delay(200);
-    Serial<< "." << endl;
-    pServer->startAdvertising(); // restart advertising
-    Serial<< F("--> Start Advertising Device Name") << endl;
-    oldDeviceConnected = deviceConnected; // oldDeviceConnected = false
-  }
-  // Connecting
-  if (deviceConnected && !oldDeviceConnected) {
-    // do stuff here on connecting
-    oldDeviceConnected = deviceConnected; // oldDeviceConnected = true
-    Serial<< F("--> Connecting\n");
-  }
-  // Wait for connection
-  if(!deviceConnected){
-    Serial<< F("--> Waiting for connection");
-    while(!deviceConnected){
-      //if( GpsUart.available() ) GpsUart.flush();
-      digitalWrite(LED_PIN, ledState^=1);
-      if(ledState) delay(100);
-      else{
-        delay(900);
-        Serial<<(".");
-      }
-//      delay((ledState) ? 100 : 2900);
-    }
-    Serial<<endl;
-    digitalWrite(LED_PIN, LOW);
-    //GpsUart.flush();
   }
 }
