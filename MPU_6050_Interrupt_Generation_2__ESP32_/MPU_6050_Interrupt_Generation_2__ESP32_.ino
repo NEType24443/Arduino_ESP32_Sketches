@@ -2,14 +2,14 @@
 #include <MPU6050.h>
 #include<Streaming.h>
 
-#define LED_PIN 2
-#define INTERRUPT_PIN 22
+#define LED_PIN GPIO_NUM_2
+#define INTERRUPT_PIN GPIO_NUM_23
 
-#define SDA_PIN 1
-#define SCL_PIN 19 // 21
+#define SDA_PIN GPIO_NUM_22
+#define SCL_PIN GPIO_NUM_21 // 21
 
-#define MOTION_THRESHOLD 5   // 12
-#define MOTION_EVENT_DURATION 500    //50
+#define MOTION_THRESHOLD 12   // 12, 5
+#define MOTION_EVENT_DURATION 50    //50, 500
 
 MPU6050 accelgyro;
 volatile bool ledState = false;
@@ -56,4 +56,5 @@ void setup() {
 
 void loop() {
   //digitalWrite(3, millis()%1000>500);
+  Serial<<"Boot Count: "<<endl;
 }

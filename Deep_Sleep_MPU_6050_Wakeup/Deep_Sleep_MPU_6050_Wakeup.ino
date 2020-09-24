@@ -1,22 +1,21 @@
-// Deep_Sleep_MPU6050_Wakeup
-
-// NOT FIXED YET!!!
-
 #include <Wire.h>
 #include <MPU6050.h>
 #include <Streaming.h>
+#include <EEPROM.h>
 #include <driver/rtc_io.h>
 
 #define LED_PIN GPIO_NUM_2
 #define INTERRUPT_PIN GPIO_NUM_33
 
-#define SDA_PIN GPIO_NUM_21
-#define SCL_PIN GPIO_NUM_22
+#define SDA_PIN GPIO_NUM_22
+#define SCL_PIN GPIO_NUM_21
 
-#define MOTION_THRESHOLD 12   // 12
+#define MOTION_THRESHOLD 5   // 12
 #define MOTION_EVENT_DURATION 50    //50
 
 MPU6050 accelgyro;
+
+RTC_DATA_ATTR String lastString = "";
 RTC_DATA_ATTR int bootCount = 0;
 RTC_DATA_ATTR bool ledState = false;
 
@@ -29,7 +28,8 @@ void setup() {
   ledStateChange();
   Serial<<"Boot Count: "<<bootCount<<endl;
   if(!bootCount){
-    digitalWrite(LED_PIN, HIGH);
+    rtc_gpio_hold_dis(LED_PIN);
+    rtc_gpio_set_level(LED_PIN, HIGH);
     accelgyro.initialize();
     // verify connection to MPU6050
     Serial<<"Testing device connections..."<<endl;
@@ -55,16 +55,15 @@ void setup() {
     accelgyro.setMotionDetectionThreshold(MOTION_THRESHOLD);
     // Motion detection event duration in ms
     accelgyro.setMotionDetectionDuration(MOTION_EVENT_DURATION);
-    delay(100);
-    digitalWrite(LED_PIN,LOW);
-  }
+    delay(1000);
+    rtc_gpio_set_level(LED_PIN,LOW);
+    rtc_gpio_hold_en(LED_PIN);
+}
   bootCount++;
   //delay(1);
   //Configure GPIO33 as ext0 wake up source for HIGH logic level
   esp_sleep_enable_ext0_wakeup(INTERRUPT_PIN,1);
 
-  //Go to sleep now
-  esp_deep_sleep_start();
 }
 
 void ledStateChange() {
@@ -79,5 +78,14 @@ void ledStateChange() {
 }
 
 void loop() {
-  digitalWrite(5, millis()%1000>500);
+  Serial<<"Waiting for command"<<endl;
+  while(!Serial.available());
+  if(Serial.available()){
+    //Go to sleep now
+    Serial<<"Last String was: "<<lastString<<" and " ;
+    lastString = Serial.readString();
+    Serial<<"New String is: "<<lastString<<endl
+          <<"Going to Sleep"<<endl;
+    esp_deep_sleep_start();
+  }
 }
