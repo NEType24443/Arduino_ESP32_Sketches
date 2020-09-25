@@ -342,6 +342,7 @@ class InitialSetupCharacteristicCallbacks: public BLECharacteristicCallbacks{
 class MyServerCallbacks: public BLEServerCallbacks {
   void onConnect(BLEServer* pServer) {
     deviceConnected = true;
+    mode = TRAVEL_MODE
   }
 
   void onDisconnect(BLEServer* pServer) {
