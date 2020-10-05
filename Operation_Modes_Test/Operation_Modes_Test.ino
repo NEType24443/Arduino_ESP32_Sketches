@@ -1185,10 +1185,14 @@ void setup() {
       delay(200);
     }
     Serial<<"Connected to owners phone."<<endl;
-    while (deviceConnected){ //break out when got details of owner
-      delay(1000);
-      digitalWrite(LED_PIN, millis()%2000>1800);
-      if(owner_number!="" && owner_first_name!="" && owner_last_name!=""){
+    while(true){
+      digitalWrite(LED_PIN, millis()%1000>900);
+      delay(200);
+      while (deviceConnected){ //break out when got details of owner
+        delay(1000);
+        digitalWrite(LED_PIN, millis()%2000>1800);
+      }
+      if(gsmIsValidNumber(owner_number) && owner_first_name!="" && owner_last_name!=""){
         delay(2000);
         pInitialService->stop();
         pInitialService->executeDelete();
@@ -1367,7 +1371,7 @@ void loop() {
         mode = TRAVEL_MODE;
         mpuSensitivityChange();
         #if DEBUG>0
-        Serial<< F("--> Connecting\n");
+        Serial<< F("\n--> Connecting\n");
         #endif
       }
       break;
