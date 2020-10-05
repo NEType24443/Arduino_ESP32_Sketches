@@ -28,23 +28,22 @@ bool sentSMS = 0,
      register_cmd = 0,
      deregister_cmd = 0;
 
-
-String phoneNumbers[5] =  { "0000000000000", 
-                            "0000000000000", 
-                            "0000000000000", 
-                            "0000000000000", 
-                            "0000000000000" };
+RTC_DATA_ATTR String owner_name, owner_number;
+RTC_DATA_ATTR String phoneNumbers[5] =  { "0000000000000", 
+                                          "0000000000000", 
+                                          "0000000000000", 
+                                          "0000000000000", 
+                                          "0000000000000" };
                         // { "+919448517225", "+919481501967"};
-
-uint16_t        address = 0;
 
 RTC_DATA_ATTR uint16_t boot_cnt = 0;
 
 const uint16_t  boot_cnt_addr = 0,
-                boot_cnt_size = sizeof(uint16_t),     // unsigned short
+                boot_cnt_size = sizeof(uint16_t),     // Unsigned Short
                 base_num_addr = boot_cnt_size + 1,    // Starts at EEPROM base OR the first char can immediately be read
-                num_spacing   = 0x0D, // 13 Chars
-                end_num_addr  = base_num_addr + 0x41; // beyond is no longer phone number
+                num_spacing   = 0x0D, // 13 Chars     // Gap of uint8_t with 0
+                o_num_addr    = (5*num_spacing)+base_num_addr+10, //  owner number starts here
+                o_name_addr   = o_num_addr + num_spacing + 2;     //  owner name after owner number + 1
              
 String gsmUartSend(String incoming) { //Function to communicate with SIM800 module
   GsmUart<<incoming<<endl;
@@ -228,6 +227,8 @@ void updatePhoneNumbersOnWake(){
   uint8_t i = 0;
   for(i=0; i<5; i++)
     phoneNumbers[i] = EEPROM.readString((i*num_spacing)+base_num_addr+(i*2));
+  owner_number = EEPROM.readString(o_num_addr);
+  owner_name   = EEPROM.readString(o_name_addr);
 }
 
 bool gsmParseCommand(String cmd){
@@ -318,12 +319,31 @@ bool gsmParseCommand(String cmd){
 
 void eepromDump(){
   Serial<< "EEPROM DATA" << endl
-        << "Boot Count: "<< EEPROM.readUShort(0)                                << endl
-        << "Num 1 - "    << EEPROM.readString((0*num_spacing)+base_num_addr+0)  << endl
-        << "Num 2 - "    << EEPROM.readString((1*num_spacing)+base_num_addr+2)  << endl
-        << "Num 3 - "    << EEPROM.readString((2*num_spacing)+base_num_addr+4)  << endl
-        << "Num 4 - "    << EEPROM.readString((3*num_spacing)+base_num_addr+6)  << endl
-        << "Num 5 - "    << EEPROM.readString((4*num_spacing)+base_num_addr+8)  << endl;
+        << "Boot Count: "  << EEPROM.readUShort(0)                                << endl
+        << "Num 1 - "      << EEPROM.readString((0*num_spacing)+base_num_addr+0)  << endl
+        << "Num 2 - "      << EEPROM.readString((1*num_spacing)+base_num_addr+2)  << endl
+        << "Num 3 - "      << EEPROM.readString((2*num_spacing)+base_num_addr+4)  << endl
+        << "Num 4 - "      << EEPROM.readString((3*num_spacing)+base_num_addr+6)  << endl
+        << "Num 5 - "      << EEPROM.readString((4*num_spacing)+base_num_addr+8)  << endl
+        <<"Owner Number - "<< EEPROM.readString(o_num_addr)                       << endl
+        <<"Owner Name - "  << EEPROM.readString(o_name_addr)                      << endl;
+}
+
+void registerOwner(String name, String number){
+  EEPROM.writeString(o_num_addr, number);
+  EEPROM.writeUChar (o_name_addr-1, 0   );
+  EEPROM.writeString(o_name_addr, name  );
+  EEPROM.commit();
+}
+
+void getOwnerData(){
+  while(!Serial.available());
+  owner_number = Serial.readString();
+  owner_number.trim();
+  while(!Serial.available());
+  owner_name = Serial.readString();
+  owner_name.trim();
+  registerOwner(owner_name, owner_number);
 }
 
 void IRAM_ATTR interruptServiceRoutineRing() {
@@ -360,6 +380,8 @@ void setup() {
     EEPROM.writeString((3*num_spacing)+base_num_addr+6, "0000000000000");
     EEPROM.writeUChar ((4*num_spacing)+base_num_addr+7, 0);
     EEPROM.writeString((4*num_spacing)+base_num_addr+8, "0000000000000");
+    EEPROM.writeUChar ((5*num_spacing)+base_num_addr+9, 0);
+    EEPROM.writeString(o_num_addr, "0000000000000");
     delay(5000);
   }
   else{
@@ -373,9 +395,6 @@ void setup() {
   while(!gsmVerify(gsmUartSend("AT+IPR=115200")));
   while(!gsmConnectionCheck());
   while(!gsmCallIdSet());
-//  while(!GsmUart.available());
-//  GsmUart.flush();
-//  Serial<<"Putting GSM to sleep"<<endl;
   gsmSleep(ON);
   boot_cnt++;
   EEPROM.writeUShort(0,boot_cnt);
@@ -407,6 +426,7 @@ void loop() {
         registerNewNumber(r);
       }
     }
+    else if(r == "5")           getOwnerData();
     else                        gsmUartSend(r);
   }
   else{
